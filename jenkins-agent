@@ -1,0 +1,134 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-ubuntu-storageclass
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jenkins-agent-pv
+spec:
+  capacity:
+    storage: 4.5G
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-ubuntu-storageclass
+  local:
+    path: /mnt/disks/jenkins-agent 
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ubuntu
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-agent-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-ubuntu-storageclass
+  resources:
+    requests:
+      storage: 4.5G
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-agent
+  labels:
+    role: jenkins-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: jenkins-agent
+  template:
+    metadata:
+      labels:
+        role: jenkins-agent
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - ubuntu
+
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+      containers:
+      - name: jenkins-ssh-agent
+        image: jenkins/ssh-agent:alpine-jdk21
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Waiting for internet connectivity..."
+            until nc -z dl-cdn.alpinelinux.org 80; do
+              echo "Network not ready yet. Retrying in 3 seconds..."
+              sleep 250
+            done
+            echo "Network connection established!"
+
+            apk add --no-cache docker-cli kubectl
+            
+            echo "jenkins:root" | chpasswd
+            sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+            sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication no/' /etc/ssh/sshd_config
+            
+            exec /usr/local/bin/setup-sshd
+        ports:
+        - containerPort: 22
+          name: ssh
+        securityContext:
+          capabilities:
+            add:
+            - SYS_CHROOT    
+        env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2376
+        - name: DOCKER_TLS_VERIFY
+          value: "1"
+        - name: DOCKER_CERT_PATH
+          value: /certs/client
+        volumeMounts:
+        - name: shared-workspace-pvc
+          mountPath: /certs
+          subPath: certs
+        - name: shared-workspace-pvc
+          mountPath: /home/jenkins/agent
+          subPath: workspace
+
+      - name: dind-daemon
+        image: docker:27-dind
+        securityContext:
+          privileged: true
+        env:
+        - name: DOCKER_TLS_CERTDIR
+          value: /certs
+        volumeMounts:
+        - name: shared-workspace-pvc
+          mountPath: /certs
+          subPath: certs
+        - name: shared-workspace-pvc
+          mountPath: /home/jenkins/agent
+          subPath: workspace
+
+      volumes:
+      - name: shared-workspace-pvc
+        persistentVolumeClaim:
+          claimName: jenkins-agent-pvc
