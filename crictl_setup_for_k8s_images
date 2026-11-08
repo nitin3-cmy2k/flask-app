@@ -1,0 +1,36 @@
+# Define a valid version matching or close to your cluster minor version
+set +x
+set -e
+
+VERSION="v1.33.0"
+
+# Direct verified path to the official tarball
+# Check if crictl is already installed
+if command -v crictl &> /dev/null; then
+    echo "crictl is already installed. Skipping download."
+    sleep 5
+else
+    echo "crictl not found. Downloading version $VERSION..."
+    # Direct verified path to the official tarball
+wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-$VERSION-linux-amd64.tar.gz
+sleep 5
+# Extract cleanly into your local binary executable path
+sudo tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
+fi
+# Remove download archive
+#rm -f crictl-$VERSION-linux-amd64.tar.gz
+
+# Disable error exiting temporarily so a failing 'crictl' command doesn't kill the script before the 'else' block executes
+set +e
+# Check the kubeadm images
+sudo crictl images
+if [ $? -eq 0 ]; then
+	sleep 5
+	echo "Checking download images for cluster kubernetes with kubeadm"
+	sleep 10 &>/dev/null
+    watch -n 1 sudo crictl images
+else 
+    echo "Error:i crictl images failed. Is containerd running or is /etc/crictl.yaml misconfigured?"
+    exit 1
+fi
+
