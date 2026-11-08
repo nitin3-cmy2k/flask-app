@@ -241,4 +241,3 @@ if __name__ == '__main__':
         app.run(host='0.0.0.0', port=5000, debug=True)
     else:
         print("CRITICAL: Failed to connect to database. Server halting lifecycle.")
-
