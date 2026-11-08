@@ -1,0 +1,5 @@
+#kubectl run net-test --namespace <your-jenkins-namespace> --image=busybox:latest --rm -it --restart=Never -- sh
+
+kubectl run net-test --namespace default --image=busybox:latest --rm -it --restart=Never -- sh
+
+#kubectl run net-test --namespace <your-jenkins-namespace> --image=busybox:latest -t  --rm  --restart=Never -- nslookup google.com
