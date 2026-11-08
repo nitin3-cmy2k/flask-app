@@ -1,0 +1,61 @@
+#!/bin/bash
+# Complete Kubernetes Kubeadm Cluster Deletion & Cleanup Script
+set -e 
+set -x
+# Ensure script is run as root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run this script as root or with sudo."
+  exit 1
+fi
+
+echo "=== Starting Kubernetes Cluster Cleanup ==="
+
+# 1. Reset kubeadm
+echo "Stopping control plane and resetting kubeadm..."
+kubeadm reset -f
+
+# 2. Stop services
+echo "Stopping kubelet..."
+systemctl stop kubelet
+
+# 3. Clean up remaining containers
+echo "Cleaning up lingering containers..."
+if command -v crictl &> /dev/null; then
+    crictl rm -f $(crictl ps -a -q) 2>/dev/null
+fi
+if command -v docker &> /dev/null; then
+    docker rm -f $(docker ps -a -q) 2>/dev/null
+fi
+
+# 4. Remove directories and configuration files
+echo "Removing Kubernetes and CNI files..."
+rm -rf /etc/kubernetes/
+rm -rf /etc/cni/net.d/
+rm -rf /var/lib/cni/
+rm -rf /var/lib/kubelet/
+rm -rf /var/lib/etcd/
+rm -rf /var/run/kubernetes/
+rm -rf $HOME/.kube/
+rm -rf /root/.kube/
+
+# 5. Reset network interfaces
+echo "Cleaning up virtual network interfaces..."
+ip link delete cni0 2>/dev/null
+ip link delete flannel.1 2>/dev/null
+ip link delete tunl0 2>/dev/null
+ip link delete vxlan.calico 2>/dev/null
+
+# 6. Flush iptables firewall rules
+echo "Flushing iptables rules..."
+iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+
+# 7. Restart network/firewall services
+echo "Restarting firewall services to apply network rules..."
+if systemctl is-active --quiet ufw; then
+    systemctl restart ufw
+elif systemctl is-active --quiet firewalld; then
+    systemctl restart firewalld
+fi
+
+echo "=== Cleanup Complete! ==="
+
