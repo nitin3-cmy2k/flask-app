@@ -1,0 +1,66 @@
+#kube
+set -e
+set -x
+echo "Kubernetes cluster installation with kubeadm"
+echo "# Permanently disable swap allocation"
+sudo swapoff -a
+#sudo sed -i '/ swap / s/^(.*)$/#\1/g' /etc/fstab
+echo "# Enable overlay and bridge network filtering modules"
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+sudo modprobe overlay
+sudo modprobe br_netfilter
+echo "# Configure sysctl networking rules dynamically"
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward = 1
+EOF
+sudo sysctl --system
+
+echo "Update the system and install dependencies"
+sudo apt-get update -y
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg -y
+
+echo "Download the public signing key"
+sudo mkdir -p -m 755 /etc/apt/keyrings
+
+echo "# Assign tracking parameters for stable runtime distributions"
+export KUBERNETES_VERSION=v1.33
+export CRIO_VERSION=v1.33
+env |grep -i CRIO
+
+echo "Append corresponding public signing certificates and source URLs"
+#curl -fsSL https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/Release.key |sudo gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg  "https://pkgs.k8s.io/addons:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/cri-o.list
+
+curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | tee /etc/apt/sources.list.d/cri-o.list
+
+
+#echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$CRIO_VERSION/deb/ /" | tee /etc/apt/sources.list.d/cri-o.list
+echo "update apt list and install crio"
+
+sudo apt-get update -y
+sudo apt-get install -y cri-o
+
+echo "Start and register daemon parameters systematically"
+sudo systemctl daemon-reload
+#sudo systemctl enable cri-o --now
+#systemctl status cri-o.service
+systemctl start cri-o.service
+systemctl status cri-o.service
+
+
+
+echo "Add Kubernetes repository and GPG key"
+
+curl -fsSL https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$KUBERNETES_VERSION/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
+
+echo "Update package lists and install CRI-O along with Kubernetes components"
+apt-get update -y
+apt-get install -y cri-o kubelet kubeadm kubectl
