@@ -15,7 +15,7 @@ spec:
       containers:
         - name: flask-app-container
           # Replace this text string with your custom build registry name if necessary
-          image: docker.io/nitin3cmy2k/flask-mysql:latest
+          image: docker.io/nitin3cmy2k/flaskapp:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
