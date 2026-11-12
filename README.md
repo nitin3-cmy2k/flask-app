@@ -17,13 +17,11 @@ A containerized Flask and MySQL Inventory Management application deployed on a l
 # Step 1: Prepare Storage on Worker Node
 Log into the Worker node and run:
 
-sudo mkdir -p /mnt/data/mysql
+sudo mkdir -p /mnt/data/mysql && 
 sudo chmod 777 /mnt/data/mysql
 
 # Step 2: Deploy Jenkins Master & Agent
 add jenkins-agents username password in Jenkins Dashboard
-
-kubectl apply -f k8s/jenkins/
 
 Access Jenkins UI at `http://<CONTROL_PLANE_IP>:30080` and connect the agent node via `jenkins-agent-svc` on port `22`.
 
