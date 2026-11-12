@@ -37,10 +37,12 @@ Access Jenkins UI at `http://<CONTROL_PLANE_IP>:30080` and connect the agent nod
 
 Open your browser and navigate to:
 
-http//masternode:30025
+http//workernodeip:30025
 
 Post running the Jenkins pipeline successfully we will have the dashboard as shown below
 
 Dashboard Page of Inventory app 
-<img width="1366" height="720" alt="image" src="https://github.com/user-attachments/assets/9c3b0ae4-c588-41b2-8963-f86c0349ff9b" />
+
+<img width="1366" height="720" alt="image" src="https://github.com/user-attachments/assets/2d175f95-c9c7-4cb0-8240-f3c526599282" />
+
 
