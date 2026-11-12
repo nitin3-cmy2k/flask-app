@@ -42,5 +42,5 @@ http//masternode:30025
 Post running the Jenkins pipeline successfully we will have the dashboard as shown below
 
 Dashboard Page of Inventory app 
+<img width="1366" height="720" alt="image" src="https://github.com/user-attachments/assets/9c3b0ae4-c588-41b2-8963-f86c0349ff9b" />
 
-<img width="975" height="514" alt="image" src="https://github.com/user-attachments/assets/c5cb48fd-fcdc-4405-994d-efea1057a383" />
