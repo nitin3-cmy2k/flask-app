@@ -37,7 +37,7 @@ Access Jenkins UI at `http://<CONTROL_PLANE_IP>:30080` and connect the agent nod
 
 Open your browser and navigate to:
 
-http//masternode:30500
+http//masternode:30025
 
 Post running the Jenkins pipeline successfully we will have the dashboard as shown below
 
